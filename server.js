@@ -1,6 +1,5 @@
 const express = require('express');
 const { chromium } = require('playwright');
-// const sharp = require('sharp'); // (disabled for now if causing Railway issues)
 
 const app = express();
 
@@ -37,6 +36,8 @@ const CLICK_SEQUENCE = [
 
 async function startBot() {
   try {
+    console.log("🚀 Starting Playwright bot...");
+
     const browser = await chromium.launch({
       headless: true,
       args: [
@@ -48,17 +49,17 @@ async function startBot() {
 
     const page = await browser.newPage();
 
-    await page.goto(URL, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(10000);
+    await page.goto(URL, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(8000);
 
-    console.log('Starting login...');
+    console.log('🔐 Starting login sequence...');
 
     for (const point of CLICK_SEQUENCE) {
       await page.mouse.click(point.x, point.y);
-      await page.waitForTimeout(700);
+      await page.waitForTimeout(600);
     }
 
-    console.log('Login complete.');
+    console.log('✅ Login complete.');
 
     async function checkState() {
       try {
@@ -69,7 +70,16 @@ async function startBot() {
           fullPage: true
         });
 
-        const sharp = require('sharp');
+        // SAFE SHARP LOADING (prevents crash if missing native libs)
+        let sharp;
+        try {
+          sharp = require('sharp');
+        } catch (e) {
+          console.log("⚠️ Sharp not available, skipping state check");
+          currentState = "SHARP_MISSING";
+          return;
+        }
+
         const image = sharp(screenshotPath);
 
         const { data, info } = await image
@@ -91,19 +101,22 @@ async function startBot() {
 
         currentState = isOn ? 'ON' : 'OFF';
 
-        console.log('Current State:', currentState);
+        console.log('📡 Current State:', currentState);
 
       } catch (err) {
-        console.log('State check error:', err);
+        console.log('❌ State check error:', err.message);
         currentState = 'ERROR';
       }
     }
 
     await checkState();
-    setInterval(checkState, 5000);
+
+    // LOWER LOAD for Railway stability
+    setInterval(checkState, 15000);
 
   } catch (err) {
-    console.error('Bot failed to start:', err);
+    console.error('❌ Bot failed to start:', err.message);
+    currentState = 'BOT_ERROR';
   }
 }
 
@@ -111,27 +124,30 @@ async function startBot() {
    API ROUTES
 ========================= */
 
-// Health check route
 app.get('/', (req, res) => {
   res.send('🚀 CemCity Monitor is running');
 });
 
-// State API
 app.get('/state', (req, res) => {
-  res.json({ state: currentState });
+  res.json({
+    state: currentState,
+    timestamp: new Date().toISOString()
+  });
 });
 
 /* =========================
-   START SERVER
+   START SERVER (RAILWAY SAFE)
 ========================= */
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🌐 Server running on port ${PORT}`);
 
-  // Start bot AFTER server is ready
-  startBot().catch(err => {
-    console.error('Bot failed to start:', err);
-  });
+  // Delay bot startup so Railway health check passes first
+  setTimeout(() => {
+    startBot().catch(err => {
+      console.error('❌ Bot startup error:', err);
+    });
+  }, 4000);
 });
