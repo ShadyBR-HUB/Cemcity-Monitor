@@ -1,5 +1,5 @@
 const express = require('express');
-process.env.PLAYWRIGHT_BROWSERS_PATH = 0;
+//process.env.PLAYWRIGHT_BROWSERS_PATH = 0;
 const { chromium } = require('playwright');
 const sharp = require('sharp');
 
