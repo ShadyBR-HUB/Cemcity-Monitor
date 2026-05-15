@@ -1,47 +1,44 @@
 const express = require('express');
 const { chromium } = require('playwright');
+const axios = require('axios');
 
 const app = express();
 
+/* =========================
+   PUSH NOTIFICATIONS
+========================= */
+
+const PUSHCUT_ON_URL =
+  'https://api.pushcut.io/2s-fteOdASSoBDR6YOitm/notifications/Cemcity%20Alert%20-%20ON';
+
+const PUSHCUT_OFF_URL =
+  'https://api.pushcut.io/2s-fteOdASSoBDR6YOitm/notifications/Cemcity%20Alert%20-%20OFF';
+
+/* =========================
+   STATE TRACKING
+========================= */
+
 let currentState = 'UNKNOWN';
+let previousState = 'UNKNOWN';
+
 let browserInstance = null;
 let intervalHandle = null;
 let pageInstance = null;
 
-const URL = 'https://user.cemcity.com/#/';
+/* =========================
+   CONFIG
+========================= */
 
+const URL = 'https://user.cemcity.com/#/';
 const STATE_COORDINATE = { x: 445, y: 253 };
 
-const CLICK_SEQUENCE = [
-  { x: 600, y: 371 },
-  { x: 589, y: 318 },
-  { x: 525, y: 322 },
-  { x: 492, y: 319 },
-  { x: 688, y: 318 },
-  { x: 644, y: 539 },
-  { x: 601, y: 424 },
-  { x: 553, y: 367 },
-  { x: 589, y: 461 },
-  { x: 744, y: 416 },
-  { x: 744, y: 416 },
-  { x: 571, y: 306 },
-  { x: 715, y: 356 },
-  { x: 540, y: 394 },
-  { x: 543, y: 363 },
-  { x: 718, y: 356 },
-  { x: 647, y: 545 },
-  { x: 630, y: 521 }
-];
-
 /* =========================
-   BOT LOGIC
+   BOT START
 ========================= */
 
 async function startBot() {
-
   try {
-
-    console.log("🚀 Starting bot...");
+    console.log('🚀 Starting bot...');
 
     browserInstance = await chromium.launch({
       headless: true,
@@ -54,52 +51,28 @@ async function startBot() {
 
     pageInstance = await browserInstance.newPage();
 
-    await pageInstance.goto(URL, {
-      waitUntil: 'domcontentloaded'
-    });
+    await pageInstance.goto(URL, { waitUntil: 'domcontentloaded' });
 
     await pageInstance.waitForTimeout(8000);
 
-    console.log('🔐 Starting login sequence...');
+    console.log('✅ Page loaded');
 
-    for (const point of CLICK_SEQUENCE) {
-
-      await pageInstance.mouse.click(point.x, point.y);
-
-      await pageInstance.waitForTimeout(600);
-    }
-
-    console.log('✅ Login complete.');
+    /* =========================
+       STATE CHECK (RUN EVERY 1s)
+    ========================= */
 
     async function checkState() {
-
       try {
-
-        const screenshotPath = 'state_check.png';
+        const screenshotPath = 'state.png';
 
         await pageInstance.screenshot({
           path: screenshotPath,
           fullPage: true
         });
 
-        let sharp;
+        const sharp = require('sharp');
 
-        try {
-
-          sharp = require('sharp');
-
-        } catch (e) {
-
-          console.log("⚠️ Sharp missing");
-
-          currentState = "SHARP_MISSING";
-
-          return;
-        }
-
-        const image = sharp(screenshotPath);
-
-        const { data, info } = await image
+        const { data, info } = await sharp(screenshotPath)
           .raw()
           .ensureAlpha()
           .toBuffer({ resolveWithObject: true });
@@ -120,10 +93,43 @@ async function startBot() {
 
         console.log('📡 State:', currentState);
 
+        /* =========================
+           OFF → ON EVENT
+        ========================= */
+
+        if (currentState === 'ON' && previousState !== 'ON') {
+          console.log('📲 OFF → ON detected');
+
+          try {
+            await axios.post(PUSHCUT_ON_URL);
+            console.log('✅ ON notification sent');
+          } catch (err) {
+            console.log('❌ ON error:', err.message);
+          }
+        }
+
+        /* =========================
+           ON → OFF EVENT
+        ========================= */
+
+        if (currentState === 'OFF' && previousState === 'ON') {
+          console.log('📴 ON → OFF detected');
+
+          try {
+            await axios.post(PUSHCUT_OFF_URL);
+            console.log('✅ OFF notification sent');
+          } catch (err) {
+            console.log('❌ OFF error:', err.message);
+          }
+        }
+
+        /* =========================
+           UPDATE STATE
+        ========================= */
+
+        previousState = currentState;
       } catch (err) {
-
         console.log('❌ State check error:', err.message);
-
         currentState = 'ERROR';
       }
     }
@@ -131,74 +137,21 @@ async function startBot() {
     await checkState();
 
     intervalHandle = setInterval(checkState, 1000);
-
   } catch (err) {
-
     console.error('❌ Bot failed:', err.message);
-
     currentState = 'BOT_ERROR';
   }
 }
 
 /* =========================
-   API ROUTES
+   API
 ========================= */
 
-app.get('/', (req, res) => {
-
-  res.send(`
-    <h1>🚀 CemCity Monitor Running</h1>
-
-    <p>Current State (KAHRABA DAWLE): <strong>${currentState}</strong></p>
-
-    <p>
-      <a href="/screen" target="_blank">
-        Open Live Portal Screenshot
-      </a>
-    </p>
-
-    <img src="/screen" width="100%" />
-  `);
-
-});
-
 app.get('/state', (req, res) => {
-
   res.json({
     state: currentState,
     timestamp: new Date().toISOString()
   });
-
-});
-
-/* =========================
-   LIVE SCREENSHOT ROUTE
-========================= */
-
-app.get('/screen', async (req, res) => {
-
-  try {
-
-    if (!pageInstance) {
-
-      return res.status(503).send('Page not ready');
-    }
-
-    const screenshot = await pageInstance.screenshot({
-      type: 'png',
-      fullPage: true
-    });
-
-    res.set('Content-Type', 'image/png');
-
-    res.send(screenshot);
-
-  } catch (err) {
-
-    console.log('❌ Screenshot route error:', err.message);
-
-    res.status(500).send('Screenshot failed');
-  }
 });
 
 /* =========================
@@ -207,16 +160,12 @@ app.get('/screen', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, "0.0.0.0", () => {
-
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🌐 Server running on port ${PORT}`);
 
   setTimeout(() => {
-
     startBot().catch(console.error);
-
-  }, 4000);
-
+  }, 3000);
 });
 
 /* =========================
@@ -224,27 +173,12 @@ app.listen(PORT, "0.0.0.0", () => {
 ========================= */
 
 process.on('SIGTERM', async () => {
-
-  console.log('🛑 SIGTERM received, shutting down...');
+  console.log('🛑 Shutting down...');
 
   try {
-
-    if (intervalHandle) {
-
-      clearInterval(intervalHandle);
-
-      console.log('⏹ Interval cleared');
-    }
-
-    if (browserInstance) {
-
-      await browserInstance.close();
-
-      console.log('🧹 Browser closed');
-    }
-
+    if (intervalHandle) clearInterval(intervalHandle);
+    if (browserInstance) await browserInstance.close();
   } catch (err) {
-
     console.log('Shutdown error:', err.message);
   }
 
