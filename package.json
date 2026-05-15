@@ -1,6 +1,5 @@
 {
-  "scripts": {
-    "start": "node server.js",
-    "postbuild": "npx playwright install chromium"
-  }
+"scripts": {
+  "start": "node server.js"
+}
 }
