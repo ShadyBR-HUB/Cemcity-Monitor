@@ -130,7 +130,7 @@ async function startBot() {
 
     await checkState();
 
-    intervalHandle = setInterval(checkState, 15000);
+    intervalHandle = setInterval(checkState, 1000);
 
   } catch (err) {
 
