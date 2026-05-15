@@ -1,7 +1,5 @@
 const express = require('express');
-// process.env.PLAYWRIGHT_BROWSERS_PATH = 0;
 const { chromium } = require('playwright');
-//const sharp = require('sharp');
 
 const app = express();
 
@@ -20,72 +18,95 @@ const CLICK_SEQUENCE = [
 ];
 
 async function startBot() {
-const browser = await chromium.launch({
-  headless: true,
-  args: ['--no-sandbox', '--disable-setuid-sandbox']
-});
-  const page = await browser.newPage();
+  try {
+    const browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
 
-  await page.goto(URL, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(10000);
+    const page = await browser.newPage();
 
-  console.log('Starting login...');
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(10000);
 
-  for (const point of CLICK_SEQUENCE) {
-    await page.mouse.click(point.x, point.y);
-    await page.waitForTimeout(700);
-  }
+    console.log('Starting login...');
 
-  console.log('Login complete.');
-
-  async function checkState() {
-    try {
-      const screenshotPath = 'state_check.png';
-
-      await page.screenshot({ path: screenshotPath, fullPage: true });
-
-      const { x, y } = STATE_COORDINATE;
-
-      const image = sharp(screenshotPath);
-      const { data, info } = await image.raw().ensureAlpha().toBuffer({ resolveWithObject: true });
-
-      const index = (y * info.width + x) * 4;
-
-      const r = data[index];
-      const g = data[index + 1];
-      const b = data[index + 2];
-
-      const isOn =
-        (r === 255 && g === 255 && b === 255) ||
-        (r === 0 && g === 255 && b === 0);
-
-      currentState = isOn ? 'ON' : 'OFF';
-
-      console.log('Current State:', currentState);
-
-    } catch (err) {
-      console.log(err);
-      currentState = 'ERROR';
+    for (const point of CLICK_SEQUENCE) {
+      await page.mouse.click(point.x, point.y);
+      await page.waitForTimeout(700);
     }
-  }
 
-  await checkState();
-  setInterval(checkState, 5000);
+    console.log('Login complete.');
+
+    async function checkState() {
+      try {
+        const screenshotPath = 'state_check.png';
+
+        await page.screenshot({ path: screenshotPath, fullPage: true });
+
+        const sharp = require('sharp');
+        const image = sharp(screenshotPath);
+
+        const { data, info } = await image
+          .raw()
+          .ensureAlpha()
+          .toBuffer({ resolveWithObject: true });
+
+        const { x, y } = STATE_COORDINATE;
+
+        const index = (y * info.width + x) * 4;
+
+        const r = data[index];
+        const g = data[index + 1];
+        const b = data[index + 2];
+
+        const isOn =
+          (r === 255 && g === 255 && b === 255) ||
+          (r === 0 && g === 255 && b === 0);
+
+        currentState = isOn ? 'ON' : 'OFF';
+
+        console.log('Current State:', currentState);
+
+      } catch (err) {
+        console.log(err);
+        currentState = 'ERROR';
+      }
+    }
+
+    await checkState();
+    setInterval(checkState, 5000);
+
+  } catch (err) {
+    console.error('Bot failed to start:', err);
+  }
 }
 
-// API
+---
+
+/* =======================
+   ROUTES
+======================= */
+
+// ✅ HOME ROUTE (FIX YOUR "NOT FOUND")
+app.get('/', (req, res) => {
+  res.send('🚀 CemCity Monitor is running');
+});
+
+// API ROUTE
 app.get('/state', (req, res) => {
   res.json({ state: currentState });
 });
 
-// IMPORTANT: start server FIRST
+/* =======================
+   START SERVER
+======================= */
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
-  // DO NOT block server startup
-  startBot().catch(err => {
-    console.error('Bot failed to start:', err);
-  });
+  // start bot AFTER server is ready
+  startBot();
 });
