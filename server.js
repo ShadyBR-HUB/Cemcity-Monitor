@@ -19,7 +19,7 @@ const PUSHCUT_OFF_URL =
 ========================= */
 
 let currentState = 'UNKNOWN';
-let previousState = 'ON';
+let previousState = 'UNKNOWN';
 
 let browserInstance = null;
 let intervalHandle = null;
