@@ -6,6 +6,7 @@ const app = express();
 let currentState = 'UNKNOWN';
 let browserInstance = null;
 let intervalHandle = null;
+let pageInstance = null;
 
 const URL = 'https://user.cemcity.com/#/';
 
@@ -37,7 +38,9 @@ const CLICK_SEQUENCE = [
 ========================= */
 
 async function startBot() {
+
   try {
+
     console.log("🚀 Starting bot...");
 
     browserInstance = await chromium.launch({
@@ -49,35 +52,48 @@ async function startBot() {
       ]
     });
 
-    const page = await browserInstance.newPage();
+    pageInstance = await browserInstance.newPage();
 
-    await page.goto(URL, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(8000);
+    await pageInstance.goto(URL, {
+      waitUntil: 'domcontentloaded'
+    });
+
+    await pageInstance.waitForTimeout(8000);
 
     console.log('🔐 Starting login sequence...');
 
     for (const point of CLICK_SEQUENCE) {
-      await page.mouse.click(point.x, point.y);
-      await page.waitForTimeout(600);
+
+      await pageInstance.mouse.click(point.x, point.y);
+
+      await pageInstance.waitForTimeout(600);
     }
 
     console.log('✅ Login complete.');
 
     async function checkState() {
+
       try {
+
         const screenshotPath = 'state_check.png';
 
-        await page.screenshot({
+        await pageInstance.screenshot({
           path: screenshotPath,
           fullPage: true
         });
 
         let sharp;
+
         try {
+
           sharp = require('sharp');
+
         } catch (e) {
+
           console.log("⚠️ Sharp missing");
+
           currentState = "SHARP_MISSING";
+
           return;
         }
 
@@ -105,7 +121,9 @@ async function startBot() {
         console.log('📡 State:', currentState);
 
       } catch (err) {
+
         console.log('❌ State check error:', err.message);
+
         currentState = 'ERROR';
       }
     }
@@ -115,7 +133,9 @@ async function startBot() {
     intervalHandle = setInterval(checkState, 15000);
 
   } catch (err) {
+
     console.error('❌ Bot failed:', err.message);
+
     currentState = 'BOT_ERROR';
   }
 }
@@ -125,14 +145,60 @@ async function startBot() {
 ========================= */
 
 app.get('/', (req, res) => {
-  res.send('🚀 CemCity Monitor is running');
+
+  res.send(`
+    <h1>🚀 CemCity Monitor Running</h1>
+
+    <p>Current State: <strong>${currentState}</strong></p>
+
+    <p>
+      <a href="/screen" target="_blank">
+        Open Live Portal Screenshot
+      </a>
+    </p>
+
+    <img src="/screen" width="100%" />
+  `);
+
 });
 
 app.get('/state', (req, res) => {
+
   res.json({
     state: currentState,
     timestamp: new Date().toISOString()
   });
+
+});
+
+/* =========================
+   LIVE SCREENSHOT ROUTE
+========================= */
+
+app.get('/screen', async (req, res) => {
+
+  try {
+
+    if (!pageInstance) {
+
+      return res.status(503).send('Page not ready');
+    }
+
+    const screenshot = await pageInstance.screenshot({
+      type: 'png',
+      fullPage: true
+    });
+
+    res.set('Content-Type', 'image/png');
+
+    res.send(screenshot);
+
+  } catch (err) {
+
+    console.log('❌ Screenshot route error:', err.message);
+
+    res.status(500).send('Screenshot failed');
+  }
 });
 
 /* =========================
@@ -142,31 +208,43 @@ app.get('/state', (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, "0.0.0.0", () => {
+
   console.log(`🌐 Server running on port ${PORT}`);
 
   setTimeout(() => {
+
     startBot().catch(console.error);
+
   }, 4000);
+
 });
 
 /* =========================
-   GRACEFUL SHUTDOWN (FIXES "STOPPING CONTAINER")
+   GRACEFUL SHUTDOWN
 ========================= */
 
 process.on('SIGTERM', async () => {
+
   console.log('🛑 SIGTERM received, shutting down...');
 
   try {
+
     if (intervalHandle) {
+
       clearInterval(intervalHandle);
+
       console.log('⏹ Interval cleared');
     }
 
     if (browserInstance) {
+
       await browserInstance.close();
+
       console.log('🧹 Browser closed');
     }
+
   } catch (err) {
+
     console.log('Shutdown error:', err.message);
   }
 
