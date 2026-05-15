@@ -149,7 +149,7 @@ app.get('/', (req, res) => {
   res.send(`
     <h1>🚀 CemCity Monitor Running</h1>
 
-    <p>Current State: <strong>${currentState}</strong></p>
+    <p>Current State (KAHRABA DAWLE): <strong>${currentState}</strong></p>
 
     <p>
       <a href="/screen" target="_blank">
