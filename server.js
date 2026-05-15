@@ -4,6 +4,8 @@ const { chromium } = require('playwright');
 const app = express();
 
 let currentState = 'UNKNOWN';
+let browserInstance = null;
+let intervalHandle = null;
 
 const URL = 'https://user.cemcity.com/#/';
 
@@ -36,9 +38,9 @@ const CLICK_SEQUENCE = [
 
 async function startBot() {
   try {
-    console.log("🚀 Starting Playwright bot...");
+    console.log("🚀 Starting bot...");
 
-    const browser = await chromium.launch({
+    browserInstance = await chromium.launch({
       headless: true,
       args: [
         '--no-sandbox',
@@ -47,7 +49,7 @@ async function startBot() {
       ]
     });
 
-    const page = await browser.newPage();
+    const page = await browserInstance.newPage();
 
     await page.goto(URL, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(8000);
@@ -70,12 +72,11 @@ async function startBot() {
           fullPage: true
         });
 
-        // SAFE SHARP LOADING (prevents crash if missing native libs)
         let sharp;
         try {
           sharp = require('sharp');
         } catch (e) {
-          console.log("⚠️ Sharp not available, skipping state check");
+          console.log("⚠️ Sharp missing");
           currentState = "SHARP_MISSING";
           return;
         }
@@ -101,7 +102,7 @@ async function startBot() {
 
         currentState = isOn ? 'ON' : 'OFF';
 
-        console.log('📡 Current State:', currentState);
+        console.log('📡 State:', currentState);
 
       } catch (err) {
         console.log('❌ State check error:', err.message);
@@ -111,11 +112,10 @@ async function startBot() {
 
     await checkState();
 
-    // LOWER LOAD for Railway stability
-    setInterval(checkState, 15000);
+    intervalHandle = setInterval(checkState, 15000);
 
   } catch (err) {
-    console.error('❌ Bot failed to start:', err.message);
+    console.error('❌ Bot failed:', err.message);
     currentState = 'BOT_ERROR';
   }
 }
@@ -136,7 +136,7 @@ app.get('/state', (req, res) => {
 });
 
 /* =========================
-   START SERVER (RAILWAY SAFE)
+   START SERVER
 ========================= */
 
 const PORT = process.env.PORT || 3000;
@@ -144,10 +144,31 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🌐 Server running on port ${PORT}`);
 
-  // Delay bot startup so Railway health check passes first
   setTimeout(() => {
-    startBot().catch(err => {
-      console.error('❌ Bot startup error:', err);
-    });
+    startBot().catch(console.error);
   }, 4000);
+});
+
+/* =========================
+   GRACEFUL SHUTDOWN (FIXES "STOPPING CONTAINER")
+========================= */
+
+process.on('SIGTERM', async () => {
+  console.log('🛑 SIGTERM received, shutting down...');
+
+  try {
+    if (intervalHandle) {
+      clearInterval(intervalHandle);
+      console.log('⏹ Interval cleared');
+    }
+
+    if (browserInstance) {
+      await browserInstance.close();
+      console.log('🧹 Browser closed');
+    }
+  } catch (err) {
+    console.log('Shutdown error:', err.message);
+  }
+
+  process.exit(0);
 });
