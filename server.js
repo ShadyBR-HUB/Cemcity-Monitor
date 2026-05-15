@@ -11,8 +11,14 @@ const app = express();
 const PUSHCUT_ON_URL =
   'https://api.pushcut.io/2s-fteOdASSoBDR6YOitm/notifications/Cemcity%20Alert%20-%20ON';
 
+const PUSHCUT_ON_URL_2 =
+  'https://api.pushcut.io/KnDY08LgE503l5Xv-pYQy/notifications/Cemcity%20Alert%20-%20ON';
+
 const PUSHCUT_OFF_URL =
   'https://api.pushcut.io/2s-fteOdASSoBDR6YOitm/notifications/Cemcity%20Alert%20-%20OFF';
+
+const PUSHCUT_OFF_URL_2 =
+  'https://api.pushcut.io/KnDY08LgE503l5Xv-pYQy/notifications/Cemcity%20Alert%20-%20OFF';
 
 /* =========================
    STATE TRACKING
@@ -58,7 +64,7 @@ async function startBot() {
     console.log('✅ Page loaded');
 
     /* =========================
-       STATE CHECK (RUN EVERY 1s)
+       STATE CHECK
     ========================= */
 
     async function checkState() {
@@ -102,7 +108,8 @@ async function startBot() {
 
           try {
             await axios.post(PUSHCUT_ON_URL);
-            console.log('✅ ON notification sent');
+            await axios.post(PUSHCUT_ON_URL_2);
+            console.log('✅ ON notifications sent');
           } catch (err) {
             console.log('❌ ON error:', err.message);
           }
@@ -117,17 +124,15 @@ async function startBot() {
 
           try {
             await axios.post(PUSHCUT_OFF_URL);
-            console.log('✅ OFF notification sent');
+            await axios.post(PUSHCUT_OFF_URL_2);
+            console.log('✅ OFF notifications sent');
           } catch (err) {
             console.log('❌ OFF error:', err.message);
           }
         }
 
-        /* =========================
-           UPDATE STATE
-        ========================= */
-
         previousState = currentState;
+
       } catch (err) {
         console.log('❌ State check error:', err.message);
         currentState = 'ERROR';
@@ -137,6 +142,7 @@ async function startBot() {
     await checkState();
 
     intervalHandle = setInterval(checkState, 1000);
+
   } catch (err) {
     console.error('❌ Bot failed:', err.message);
     currentState = 'BOT_ERROR';
