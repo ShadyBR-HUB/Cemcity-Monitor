@@ -1,8 +1,7 @@
 {
-"scripts": {
-  "start": "node server.js",
-  "postinstall": "npx playwright install --with-deps"
-},
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
     "express": "^4.18.2",
     "playwright": "^1.49.0",
