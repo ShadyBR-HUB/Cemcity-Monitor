@@ -81,6 +81,8 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
-  // start bot AFTER server is ready
-  startBot();
+  // DO NOT block server startup
+  startBot().catch(err => {
+    console.error('Bot failed to start:', err);
+  });
 });
