@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 const path = require('path');
 
-const URL = 'https://cemcity.com'; 
+const URL = 'https://user.cemcity.com'; 
 const BLOCK_DELAY = 250;         
 const POLL_INTERVAL = 1000;      
 
