@@ -2,16 +2,15 @@ const { chromium } = require('playwright');
 const path = require('path');
 
 const URL = 'https://user.cemcity.com'; 
-const STEP_DELAY = 50;           
-const BLOCK_DELAY = 200;         
-const AFTER_ENTER_DELAY = 200;   
+const BLOCK_DELAY = 250;         
+const AFTER_ENTER_DELAY = 300;   
 const POLL_INTERVAL = 1000;      
 
 // --- PUSHCUT API ENDPOINTS ---
-const PUSHCUT_ON_URL = 'https://api.pushcut.io/2s-fteOdASSoBDR6YOitm/notifications/Cemcity%20Alert%20-%20ON';
-const PUSHCUT_ON_URL_2 = 'https://api.pushcut.io/KnDY08LgE503l5Xv-pYQy/notifications/Cemcity%20Alert%20-%20ON';
-const PUSHCUT_OFF_URL = 'https://api.pushcut.io/2s-fteOdASSoBDR6YOitm/notifications/Cemcity%20Alert%20-%20OFF';
-const PUSHCUT_OFF_URL_2 = 'https://api.pushcut.io/KnDY08LgE503l5Xv-pYQy/notifications/Cemcity%20Alert%20-%20OFF';
+const PUSHCUT_ON_URL = 'https://pushcut.io';
+const PUSHCUT_ON_URL_2 = 'https://pushcut.io';
+const PUSHCUT_OFF_URL = 'https://pushcut.io';
+const PUSHCUT_OFF_URL_2 = 'https://pushcut.io';
 
 async function sendPushcutNotifications(status) {
     const targets = status === 'ON' 
@@ -31,15 +30,12 @@ async function sendPushcutNotifications(status) {
     );
 }
 
-// Core execution block wrapped inside a named function to allow recursive re-runs
 async function runTrackerEngine() {
     let browser;
-    let isWebSocketActive = false; // Watchdog tracker flag
+    let isWebSocketActive = false; 
 
     try {
-        console.log("\n[Engine Initialization]: Launching background headless browser...");
-        
-        // FIX: Removed channel: 'chrome' so it works natively on Linux containers
+        console.log("\n[Engine Initialization]: Launching cloud browser instance...");
         browser = await chromium.launch({
             headless: true, 
             args: [
@@ -48,7 +44,6 @@ async function runTrackerEngine() {
                 '--disable-gpu',
                 '--touch-events=disabled',
                 '--disable-touch-drag-drop',
-                '--disable-features=TouchpadAndWheelScrollLatching',
                 '--window-size=1920,1080', 
                 '--force-device-scale-factor=1' 
             ]
@@ -72,8 +67,8 @@ async function runTrackerEngine() {
 
         // --- NATIVE WEBSOCKET INTERCEPTOR ---
         page.on('websocket', (ws) => {
-            console.log(`[WebSocket Connected]: Tracking device streams...`);
-            isWebSocketActive = true; // Set flag to true when connection is verified
+            console.log(`[WebSocket Connected Successfully]: Tracking active device streams...`);
+            isWebSocketActive = true; 
             
             ws.on('framereceived', (frame) => {
                 try {
@@ -113,101 +108,74 @@ async function runTrackerEngine() {
             });
         });
 
-        console.log(`Navigating to ${URL}...`);
+        console.log(`Navigating to dashboard login gateway -> ${URL}...`);
         await page.goto(URL, { waitUntil: 'networkidle', timeout: 60000 });
         
-        console.log("Waiting for CanvasKit engine initialization (20s)...");
-        await page.waitForTimeout(20000);
+        console.log("Waiting for cloud asset compiler layers (15s)...");
+        await page.waitForTimeout(15000);
         
+        // Target the absolute text interaction layer frame center core
         await page.mouse.click(960, 540); 
-        await page.waitForTimeout(1000);   
+        await page.waitForTimeout(800);   
 
-        async function pressKeys(key, count) {
-            for (let i = 0; i < count; i++) {
-                if (key === 'Shift+Tab') {
-                    await page.keyboard.down('Shift');
-                    await page.keyboard.press('Tab');
-                    await page.keyboard.up('Shift');
-                } else {
-                    await page.keyboard.press(key);
-                }
-                await page.waitForTimeout(STEP_DELAY);
-            }
-        }
-
-        async function runStep(key, count) {
-            await pressKeys(key, count);
-            await page.waitForTimeout(BLOCK_DELAY);
-            if (key === 'Enter') {
-                await page.waitForTimeout(AFTER_ENTER_DELAY);
-            }
-        }
-
-        console.log("Executing automatic text-clearing login bypass sequence...");
+        console.log("Executing entry authorization processing payload...");
+        
+        // Move layout focus into the username textbox
         await page.keyboard.press('Tab'); 
         await page.waitForTimeout(BLOCK_DELAY);
 
+        // Select all arbitrary prefilled garbage string data characters
         await page.keyboard.down('Control');
         await page.keyboard.press('A');
         await page.keyboard.up('Control');
-        await page.waitForTimeout(STEP_DELAY);
+        await page.waitForTimeout(BLOCK_DELAY);
 
+        // Wipe the text field clean
         await page.keyboard.press('Backspace');
         await page.waitForTimeout(BLOCK_DELAY);
 
-        await page.keyboard.type('4217', { delay: 50 });
+        // Type the active account ID identifier
+        await page.keyboard.type('4217', { delay: 60 });
         await page.waitForTimeout(BLOCK_DELAY);
 
+        // Submit the forms sequence parameters
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(AFTER_ENTER_DELAY * 2); 
-
-        console.log("Executing remaining UI Macro Sequence navigation steps...");
-        const sequence = [
-            ['Tab', 2], ['Enter', 1], ['Tab', 5], ['Enter', 1],
-            ['Shift+Tab', 2], ['Enter', 1], ['Shift+Tab', 1], ['Enter', 1],
-            ['Tab', 6], ['Enter', 1], ['Tab', 32], ['Enter', 1],
-            ['Tab', 1], ['Enter', 1], ['Tab', 7], ['Enter', 1],
-            ['Tab', 6], ['Enter', 1], ['Shift+Tab', 1], ['Enter', 2],
-            ['Tab', 7], ['Enter', 1], ['Tab', 5], ['Enter', 1],
-            ['Tab', 1], ['Enter', 1], ['Shift+Tab', 3], ['Enter', 1],
-            ['Tab', 2], ['Enter', 1], ['Tab', 6], ['Enter', 1],
-            ['Tab', 1], ['Enter', 1]
-        ];
-
-        for (const [key, count] of sequence) {
-            await runStep(key, count);
+        
+        // --- RELIABLE EVENT DRIVEN WAIT BINDING ---
+        console.log("Bypass payload transmitted. Waiting for secure WebSocket link verification...");
+        
+        // Give the network 25 seconds to establish connection streams 
+        for (let check = 0; check < 25; check++) {
+            await page.waitForTimeout(1000);
+            if (isWebSocketActive) break;
         }
-
-        console.log("Macro setup finished. Waiting for loop confirmation validation...");
-        await page.waitForTimeout(15000); // 15-second grace period for connection response
 
         // --- WATCHDOG FAILURE VALIDATION CHECK ---
         if (!isWebSocketActive) {
             const errorSnapshot = path.join(process.cwd(), 'stuck_error.png');
             await page.screenshot({ path: errorSnapshot });
-            console.log(`[Diagnostic Saved]: Snapshot captured at -> ${errorSnapshot}`);
+            console.log(`[Diagnostic Trace Captured]: Saved snapshot layout view to -> ${errorSnapshot}`);
             
-            throw new Error("Login macro verification stalled. WebSocket channel remained closed.");
+            throw new Error("Cloud validation timeout. WebSocket network handshake remained unestablished.");
         }
 
-        console.log("Entering active surveillance monitor...");
+        console.log("Entering continuous live monitoring cycle...");
         while (true) {
             await page.waitForTimeout(POLL_INTERVAL);
         }
 
-    // --- FIX: Added the missing closure logic properties ---
     } catch (err) {
-        console.error(`\n[Execution Failure Error]: ${err.message}`);
-        console.log("Initiating immediate browser restart cycle...");
+        console.error(`[System Monitor Recovery Exception]: ${err.message}`);
+        console.log("Re-initializing execution thread loops in 5 seconds...");
         
         if (browser) {
             try { await browser.close(); } catch (e) {}
         }
         
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        return runTrackerEngine(); // Triggers automated crash recovery cycle
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        return runTrackerEngine(); 
     }
 }
 
-// Start execution
+// Fire application loops execution entry thread
 runTrackerEngine();
