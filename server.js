@@ -2,7 +2,9 @@ const { chromium } = require('playwright');
 const path = require('path');
 
 const URL = 'https://user.cemcity.com'; 
-const BLOCK_DELAY = 250;         
+const STEP_DELAY = 50;           
+const BLOCK_DELAY = 200;         
+const AFTER_ENTER_DELAY = 200;   
 const POLL_INTERVAL = 1000;      
 
 // --- PUSHCUT API ENDPOINTS ---
@@ -29,20 +31,23 @@ async function sendPushcutNotifications(status) {
     );
 }
 
+// Core execution block wrapped inside a named function to allow recursive re-runs
 async function runTrackerEngine() {
     let browser;
-    let isWebSocketActive = false; 
+    let isWebSocketActive = false; // Watchdog tracker flag
 
     try {
-        console.log("\n[Engine Initialization]: Launching cloud browser instance...");
+        console.log("\n[Engine Initialization]: Launching background headless browser...");
         browser = await chromium.launch({
             headless: true, 
+            channel: 'chrome',
             args: [
                 '--disable-blink-features=AutomationControlled', 
                 '--no-sandbox',
                 '--disable-gpu',
                 '--touch-events=disabled',
                 '--disable-touch-drag-drop',
+                '--disable-features=TouchpadAndWheelScrollLatching',
                 '--window-size=1920,1080', 
                 '--force-device-scale-factor=1' 
             ]
@@ -66,8 +71,8 @@ async function runTrackerEngine() {
 
         // --- NATIVE WEBSOCKET INTERCEPTOR ---
         page.on('websocket', (ws) => {
-            console.log(`[WebSocket Connected Successfully]: Tracking active device streams...`);
-            isWebSocketActive = true; 
+            console.log(`[WebSocket Connected]: Tracking device streams...`);
+            isWebSocketActive = true; // Set flag to true when connection is verified
             
             ws.on('framereceived', (frame) => {
                 try {
@@ -107,78 +112,104 @@ async function runTrackerEngine() {
             });
         });
 
-        console.log(`Navigating to dashboard login gateway -> ${URL}...`);
+        console.log(`Navigating to ${URL}...`);
         await page.goto(URL, { waitUntil: 'networkidle', timeout: 60000 });
         
-        console.log("Waiting for cloud asset compiler layers (20s)...");
+        console.log("Waiting for CanvasKit engine initialization (20s)...");
         await page.waitForTimeout(20000);
         
-        // FIX: Replaced simulated coordinate click with direct element focus hook 
-        // This forces headless Linux instances to select the active Flutter interface frame
-        await page.focus('body');
+        await page.mouse.click(960, 540); 
         await page.waitForTimeout(1000);   
 
-        console.log("Executing entry authorization processing payload...");
-        
-        // Move selection focus down inside the username textbox
+        async function pressKeys(key, count) {
+            for (let i = 0; i < count; i++) {
+                if (key === 'Shift+Tab') {
+                    await page.keyboard.down('Shift');
+                    await page.keyboard.press('Tab');
+                    await page.keyboard.up('Shift');
+                } else {
+                    await page.keyboard.press(key);
+                }
+                await page.waitForTimeout(STEP_DELAY);
+            }
+        }
+
+        async function runStep(key, count) {
+            await pressKeys(key, count);
+            await page.waitForTimeout(BLOCK_DELAY);
+            if (key === 'Enter') {
+                await page.waitForTimeout(AFTER_ENTER_DELAY);
+            }
+        }
+
+        console.log("Executing automatic text-clearing login bypass sequence...");
         await page.keyboard.press('Tab'); 
         await page.waitForTimeout(BLOCK_DELAY);
 
-        // Force select all pre-filled layout string properties (Control + A)
         await page.keyboard.down('Control');
         await page.keyboard.press('A');
         await page.keyboard.up('Control');
-        await page.waitForTimeout(BLOCK_DELAY);
+        await page.waitForTimeout(STEP_DELAY);
 
-        // Clear out the textbox input completely
         await page.keyboard.press('Backspace');
         await page.waitForTimeout(BLOCK_DELAY);
 
-        // Input account code
-        await page.keyboard.type('4217', { delay: 100 }); // Bumped delay for stability
+        await page.keyboard.type('4217', { delay: 50 });
         await page.waitForTimeout(BLOCK_DELAY);
 
-        // Trigger submission form verification
         await page.keyboard.press('Enter');
-        
-        console.log("Bypass payload transmitted. Waiting for secure WebSocket link verification...");
-        
-        // FIX: Bumped lookup iterations to 45 seconds to accommodate remote infrastructure handshakes
-        for (let check = 0; check < 45; check++) {
-            await page.waitForTimeout(1000);
-            if (isWebSocketActive) break;
+        await page.waitForTimeout(AFTER_ENTER_DELAY * 2); 
+
+        console.log("Executing remaining UI Macro Sequence navigation steps...");
+        const sequence = [
+            ['Tab', 2], ['Enter', 1], ['Tab', 5], ['Enter', 1],
+            ['Shift+Tab', 2], ['Enter', 1], ['Shift+Tab', 1], ['Enter', 1],
+            ['Tab', 6], ['Enter', 1], ['Tab', 32], ['Enter', 1],
+            ['Tab', 1], ['Enter', 1], ['Tab', 7], ['Enter', 1],
+            ['Tab', 6], ['Enter', 1], ['Shift+Tab', 1], ['Enter', 2],
+            ['Tab', 7], ['Enter', 1], ['Tab', 5], ['Enter', 1],
+            ['Tab', 1], ['Enter', 1], ['Shift+Tab', 3], ['Enter', 1],
+            ['Tab', 2], ['Enter', 1], ['Tab', 6], ['Enter', 1],
+            ['Tab', 1], ['Enter', 1]
+        ];
+
+        for (const [key, count] of sequence) {
+            await runStep(key, count);
         }
+
+        console.log("Macro setup finished. Waiting for loop confirmation validation...");
+        await page.waitForTimeout(15000); // 15-second grace period for connection response
 
         // --- WATCHDOG FAILURE VALIDATION CHECK ---
         if (!isWebSocketActive) {
+            // Save diagnostic image to check what caused the crash/stall later
             const errorSnapshot = path.join(process.cwd(), 'stuck_error.png');
-            try {
-                await page.screenshot({ path: errorSnapshot });
-                console.log(`[Diagnostic Trace Captured]: Saved snapshot layout view to -> ${errorSnapshot}`);
-            } catch (snapErr) {
-                // Bypass snapshot failures silently
-            }
+            await page.screenshot({ path: errorSnapshot });
+            console.log(`[Diagnostic Saved]: Snapshot captured at -> ${errorSnapshot}`);
             
-            throw new Error("Cloud validation timeout. WebSocket network handshake remained unestablished.");
+            // Force an error termination to trigger the auto-recovery cycle
+            throw new Error("Login macro verification stalled. WebSocket channel remained closed.");
         }
 
-        console.log("Entering continuous live monitoring cycle...");
+        console.log("Entering active surveillance monitor...");
         while (true) {
             await page.waitForTimeout(POLL_INTERVAL);
         }
 
     } catch (err) {
-        console.error(`[System Monitor Recovery Exception]: ${err.message}`);
-        console.log("Re-initializing execution thread loops in 7 seconds...");
+        console.error(`\n[Execution Failure Error]: ${err.message}`);
+        console.log("Initiating immediate browser restart cycle...");
         
+        // Clean close the failed window context safely
         if (browser) {
             try { await browser.close(); } catch (e) {}
         }
         
-        await new Promise(resolve => setTimeout(resolve, 7000));
-        return runTrackerEngine(); 
+        // Short rest delay to clean memory before re-running the main script loop
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        return runTrackerEngine(); // Recursively loops to restart the operation from step 1
     }
 }
 
-// Fire application loops execution entry thread
+// Kickstart the recovery script launcher
 runTrackerEngine();
