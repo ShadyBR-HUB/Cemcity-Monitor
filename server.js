@@ -1,16 +1,15 @@
 const { chromium } = require('playwright');
 const path = require('path');
 
-const URL = 'https://user.cemcity.com'; 
+const URL = 'https://cemcity.com'; 
 const BLOCK_DELAY = 250;         
-const AFTER_ENTER_DELAY = 300;   
 const POLL_INTERVAL = 1000;      
 
 // --- PUSHCUT API ENDPOINTS ---
-const PUSHCUT_ON_URL = 'https://pushcut.io';
-const PUSHCUT_ON_URL_2 = 'https://pushcut.io';
-const PUSHCUT_OFF_URL = 'https://pushcut.io';
-const PUSHCUT_OFF_URL_2 = 'https://pushcut.io';
+const PUSHCUT_ON_URL = 'https://api.pushcut.io/2s-fteOdASSoBDR6YOitm/notifications/Cemcity%20Alert%20-%20ON';
+const PUSHCUT_ON_URL_2 = 'https://api.pushcut.io/KnDY08LgE503l5Xv-pYQy/notifications/Cemcity%20Alert%20-%20ON';
+const PUSHCUT_OFF_URL = 'https://api.pushcut.io/2s-fteOdASSoBDR6YOitm/notifications/Cemcity%20Alert%20-%20OFF';
+const PUSHCUT_OFF_URL_2 = 'https://api.pushcut.io/KnDY08LgE503l5Xv-pYQy/notifications/Cemcity%20Alert%20-%20OFF';
 
 async function sendPushcutNotifications(status) {
     const targets = status === 'ON' 
@@ -111,41 +110,41 @@ async function runTrackerEngine() {
         console.log(`Navigating to dashboard login gateway -> ${URL}...`);
         await page.goto(URL, { waitUntil: 'networkidle', timeout: 60000 });
         
-        console.log("Waiting for cloud asset compiler layers (15s)...");
-        await page.waitForTimeout(15000);
+        console.log("Waiting for cloud asset compiler layers (20s)...");
+        await page.waitForTimeout(20000);
         
-        // Target the absolute text interaction layer frame center core
-        await page.mouse.click(960, 540); 
-        await page.waitForTimeout(800);   
+        // FIX: Replaced simulated coordinate click with direct element focus hook 
+        // This forces headless Linux instances to select the active Flutter interface frame
+        await page.focus('body');
+        await page.waitForTimeout(1000);   
 
         console.log("Executing entry authorization processing payload...");
         
-        // Move layout focus into the username textbox
+        // Move selection focus down inside the username textbox
         await page.keyboard.press('Tab'); 
         await page.waitForTimeout(BLOCK_DELAY);
 
-        // Select all arbitrary prefilled garbage string data characters
+        // Force select all pre-filled layout string properties (Control + A)
         await page.keyboard.down('Control');
         await page.keyboard.press('A');
         await page.keyboard.up('Control');
         await page.waitForTimeout(BLOCK_DELAY);
 
-        // Wipe the text field clean
+        // Clear out the textbox input completely
         await page.keyboard.press('Backspace');
         await page.waitForTimeout(BLOCK_DELAY);
 
-        // Type the active account ID identifier
-        await page.keyboard.type('4217', { delay: 60 });
+        // Input account code
+        await page.keyboard.type('4217', { delay: 100 }); // Bumped delay for stability
         await page.waitForTimeout(BLOCK_DELAY);
 
-        // Submit the forms sequence parameters
+        // Trigger submission form verification
         await page.keyboard.press('Enter');
         
-        // --- RELIABLE EVENT DRIVEN WAIT BINDING ---
         console.log("Bypass payload transmitted. Waiting for secure WebSocket link verification...");
         
-        // Give the network 25 seconds to establish connection streams 
-        for (let check = 0; check < 25; check++) {
+        // FIX: Bumped lookup iterations to 45 seconds to accommodate remote infrastructure handshakes
+        for (let check = 0; check < 45; check++) {
             await page.waitForTimeout(1000);
             if (isWebSocketActive) break;
         }
@@ -153,8 +152,12 @@ async function runTrackerEngine() {
         // --- WATCHDOG FAILURE VALIDATION CHECK ---
         if (!isWebSocketActive) {
             const errorSnapshot = path.join(process.cwd(), 'stuck_error.png');
-            await page.screenshot({ path: errorSnapshot });
-            console.log(`[Diagnostic Trace Captured]: Saved snapshot layout view to -> ${errorSnapshot}`);
+            try {
+                await page.screenshot({ path: errorSnapshot });
+                console.log(`[Diagnostic Trace Captured]: Saved snapshot layout view to -> ${errorSnapshot}`);
+            } catch (snapErr) {
+                // Bypass snapshot failures silently
+            }
             
             throw new Error("Cloud validation timeout. WebSocket network handshake remained unestablished.");
         }
@@ -166,13 +169,13 @@ async function runTrackerEngine() {
 
     } catch (err) {
         console.error(`[System Monitor Recovery Exception]: ${err.message}`);
-        console.log("Re-initializing execution thread loops in 5 seconds...");
+        console.log("Re-initializing execution thread loops in 7 seconds...");
         
         if (browser) {
             try { await browser.close(); } catch (e) {}
         }
         
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, 7000));
         return runTrackerEngine(); 
     }
 }
