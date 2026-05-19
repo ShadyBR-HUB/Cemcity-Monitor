@@ -4,5 +4,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
   }
 }
+
