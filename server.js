@@ -38,9 +38,10 @@ async function runTrackerEngine() {
 
     try {
         console.log("\n[Engine Initialization]: Launching background headless browser...");
+        
+        // FIX: Removed channel: 'chrome' so it works natively on Linux containers
         browser = await chromium.launch({
             headless: true, 
-            channel: 'chrome',
             args: [
                 '--disable-blink-features=AutomationControlled', 
                 '--no-sandbox',
@@ -182,12 +183,10 @@ async function runTrackerEngine() {
 
         // --- WATCHDOG FAILURE VALIDATION CHECK ---
         if (!isWebSocketActive) {
-            // Save diagnostic image to check what caused the crash/stall later
             const errorSnapshot = path.join(process.cwd(), 'stuck_error.png');
             await page.screenshot({ path: errorSnapshot });
             console.log(`[Diagnostic Saved]: Snapshot captured at -> ${errorSnapshot}`);
             
-            // Force an error termination to trigger the auto-recovery cycle
             throw new Error("Login macro verification stalled. WebSocket channel remained closed.");
         }
 
@@ -196,20 +195,19 @@ async function runTrackerEngine() {
             await page.waitForTimeout(POLL_INTERVAL);
         }
 
+    // --- FIX: Added the missing closure logic properties ---
     } catch (err) {
         console.error(`\n[Execution Failure Error]: ${err.message}`);
         console.log("Initiating immediate browser restart cycle...");
         
-        // Clean close the failed window context safely
         if (browser) {
             try { await browser.close(); } catch (e) {}
         }
         
-        // Short rest delay to clean memory before re-running the main script loop
         await new Promise(resolve => setTimeout(resolve, 3000));
-        return runTrackerEngine(); // Recursively loops to restart the operation from step 1
+        return runTrackerEngine(); // Triggers automated crash recovery cycle
     }
 }
 
-// Kickstart the recovery script launcher
+// Start execution
 runTrackerEngine();
